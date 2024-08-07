@@ -1,89 +1,180 @@
-version: '3.7'
+networks:
+  redpanda_network:
+    driver: bridge
+volumes:
+  redpanda-0: null
+  redpanda-1: null
+  redpanda-2: null
 services:
- redpanda:
-   image: docker.redpanda.com/redpandadata/redpanda:v23.1.7
-   container_name: redpanda-1
-   command:
-   - redpanda
-   - start
-   - --smp
-   - '1'
-   - --reserve-memory
-   - 0M
-   - --overprovisioned
-   - --node-id
-   - '0'
-   - --kafka-addr
-   - PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092
-   - --advertise-kafka-addr
-   - PLAINTEXT://redpanda:29092,OUTSIDE://localhost:9092
-   - --pandaproxy-addr
-   - PLAINTEXT://0.0.0.0:28082,OUTSIDE://0.0.0.0:8082
-   - --advertise-pandaproxy-addr
-   - PLAINTEXT://redpanda:28082,OUTSIDE://localhost:8082
-   ports:
-   - 8081:8081
-   - 8082:8082
-   - 9092:9092
-   - 28082:28082
-   - 29092:29092
-
- postgres:
-  image: postgres:9.6.19-alpine
-  container_name: postgres
-  ports:
-    - "5432:5432"
-  environment:
-    POSTGRES_PASSWORD: secret
-    POSTGRES_USER: root
-    POSTGRES_DB: root
-  volumes:
-  - ./files/postgres:/docker-entrypoint-initdb.d
-
- elasticsearch:
-  image: docker.elastic.co/elasticsearch/elasticsearch:7.17.5
-  container_name: elasticsearch
-  ports:
-      - 9200:9200
-  environment:
-    discovery.type: single-node
-
- kafka-connect:
-    image: confluentinc/cp-kafka-connect-base:7.2.0
-    container_name: kafka-connect
-    depends_on:
-      - redpanda
-      - postgres
-      - elasticsearch
-    ports:
-      - 8083:8083
-    environment:
-      CONNECT_BOOTSTRAP_SERVERS: "redpanda:29092"
-      CONNECT_REST_PORT: 8083
-      CONNECT_GROUP_ID: kafka-connect
-      CONNECT_CONFIG_STORAGE_TOPIC: _connect-configs
-      CONNECT_OFFSET_STORAGE_TOPIC: _connect-offsets
-      CONNECT_STATUS_STORAGE_TOPIC: _connect-status
-      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
-      CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.storage.StringConverter
-      CONNECT_REST_ADVERTISED_HOST_NAME: "kafka-connect"
-      CONNECT_LOG4J_APPENDER_STDOUT_LAYOUT_CONVERSIONPATTERN: "[%d] %p %X{connector.context}%m (%c:%L)%n"
-      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: "1"
-      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: "1"
-      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: "1"
-      CONNECT_PLUGIN_PATH: /usr/share/java,/usr/share/confluent-hub-components,/data/connect-jars
-    volumes:
-      - $PWD/data:/data
+  redpanda-0:
     command:
-      - bash
-      - -c
-      - |
-        # uncomment below to install connectors. we have commented these statements out since we are
-        # including the JARs in the GH repo so users don't have to wait for this
-        echo "Installing connectors"
-        #confluent-hub install --no-prompt confluentinc/kafka-connect-elasticsearch:11.1.3
-        #confluent-hub install --no-prompt confluentinc/kafka-connect-jdbc:10.0.0
-        echo "Launching Kafka Connect worker"
-        /etc/confluent/docker/run &
-        #
-        sleep infinity
+      - redpanda
+      - start
+      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
+      # Address the broker advertises to clients that connect to the Kafka API.
+      # Use the internal addresses to connect to the Redpanda brokers'
+      # from inside the same Docker network.
+      # Use the external addresses to connect to the Redpanda brokers'
+      # from outside the Docker network.
+      - --advertise-kafka-addr internal://redpanda-0:9092,external://localhost:19092
+      - --pandaproxy-addr internal://0.0.0.0:8082,external://0.0.0.0:18082
+      # Address the broker advertises to clients that connect to the HTTP Proxy.
+      - --advertise-pandaproxy-addr internal://redpanda-0:8082,external://localhost:18082
+      - --schema-registry-addr internal://0.0.0.0:8081,external://0.0.0.0:18081
+      # Redpanda brokers use the RPC API to communicate with each other internally.
+      - --rpc-addr redpanda-0:33145
+      - --advertise-rpc-addr redpanda-0:33145
+      # Mode dev-container uses well-known configuration properties for development in containers.
+      - --mode dev-container
+      # Tells Seastar (the framework Redpanda uses under the hood) to use 1 core on the system.
+      - --smp 1
+      - --default-log-level=info
+    image: docker.redpanda.com/redpandadata/redpanda:v24.2.1
+    container_name: redpanda-0
+    volumes:
+      - redpanda-0:/var/lib/redpanda/data
+    networks:
+      - redpanda_network
+    ports:
+      - 18081:18081
+      - 18082:18082
+      - 19092:19092
+      - 19644:9644
+  redpanda-1:
+    command:
+      - redpanda
+      - start
+      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:29092
+      - --advertise-kafka-addr internal://redpanda-1:9092,external://localhost:29092
+      - --pandaproxy-addr internal://0.0.0.0:8082,external://0.0.0.0:28082
+      - --advertise-pandaproxy-addr internal://redpanda-1:8082,external://localhost:28082
+      - --schema-registry-addr internal://0.0.0.0:8081,external://0.0.0.0:28081
+      - --rpc-addr redpanda-1:33145
+      - --advertise-rpc-addr redpanda-1:33145
+      - --mode dev-container
+      - --smp 1
+      - --default-log-level=info
+      - --seeds redpanda-0:33145
+    image: docker.redpanda.com/redpandadata/redpanda:v24.2.1
+    container_name: redpanda-1
+    volumes:
+      - redpanda-1:/var/lib/redpanda/data
+    networks:
+      - redpanda_network
+    ports:
+      - 28081:28081
+      - 28082:28082
+      - 29092:29092
+      - 29644:9644
+    depends_on:
+      - redpanda-0
+  redpanda-2:
+    command:
+      - redpanda
+      - start
+      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:39092
+      - --advertise-kafka-addr internal://redpanda-2:9092,external://localhost:39092
+      - --pandaproxy-addr internal://0.0.0.0:8082,external://0.0.0.0:38082
+      - --advertise-pandaproxy-addr internal://redpanda-2:8082,external://localhost:38082
+      - --schema-registry-addr internal://0.0.0.0:8081,external://0.0.0.0:38081
+      - --rpc-addr redpanda-2:33145
+      - --advertise-rpc-addr redpanda-2:33145
+      - --mode dev-container
+      - --smp 1
+      - --default-log-level=info
+      - --seeds redpanda-0:33145
+    image: docker.redpanda.com/redpandadata/redpanda:v24.2.1
+    container_name: redpanda-2
+    volumes:
+      - redpanda-2:/var/lib/redpanda/data
+    networks:
+      - redpanda_network
+    ports:
+      - 38081:38081
+      - 38082:38082
+      - 39092:39092
+      - 39644:9644
+    depends_on:
+      - redpanda-0
+  console:
+    container_name: redpanda-console
+    image: docker.redpanda.com/redpandadata/console:v2.6.1
+    networks:
+      - redpanda_network
+    entrypoint: /bin/sh
+    command: -c 'echo "$$CONSOLE_CONFIG_FILE" > /tmp/config.yml; /app/console'
+    environment:
+      CONFIG_FILEPATH: /tmp/config.yml
+      CONSOLE_CONFIG_FILE: |
+        kafka:
+          brokers: ["redpanda-0:9092"]
+          schemaRegistry:
+            enabled: true
+            urls: ["http://redpanda-0:8081"]
+        redpanda:
+          adminApi:
+            enabled: true
+            urls: ["http://redpanda-0:9644"]
+    ports:
+      - 8080:8080
+    depends_on:
+      - redpanda-0
+  postgres:
+    image: postgres:9.6.19-alpine
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: secret
+      POSTGRES_USER: root
+      POSTGRES_DB: root
+    volumes:
+    - ./files/postgres:/docker-entrypoint-initdb.d
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.5
+    container_name: elasticsearch
+    ports:
+        - 9200:9200
+    environment:
+      discovery.type: single-node
+
+  kafka-connect:
+      image: confluentinc/cp-kafka-connect-base:7.2.0
+      container_name: kafka-connect
+      depends_on:
+        - redpanda
+        - postgres
+        - elasticsearch
+      ports:
+        - 8083:8083
+      environment:
+        CONNECT_BOOTSTRAP_SERVERS: "redpanda:29092"
+        CONNECT_REST_PORT: 8083
+        CONNECT_GROUP_ID: kafka-connect
+        CONNECT_CONFIG_STORAGE_TOPIC: _connect-configs
+        CONNECT_OFFSET_STORAGE_TOPIC: _connect-offsets
+        CONNECT_STATUS_STORAGE_TOPIC: _connect-status
+        CONNECT_KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
+        CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.storage.StringConverter
+        CONNECT_REST_ADVERTISED_HOST_NAME: "kafka-connect"
+        CONNECT_LOG4J_APPENDER_STDOUT_LAYOUT_CONVERSIONPATTERN: "[%d] %p %X{connector.context}%m (%c:%L)%n"
+        CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: "1"
+        CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: "1"
+        CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: "1"
+        CONNECT_PLUGIN_PATH: /usr/share/java,/usr/share/confluent-hub-components,/data/connect-jars
+      volumes:
+        - $PWD/data:/data
+      command:
+        - bash
+        - -c
+        - |
+          # uncomment below to install connectors. we have commented these statements out since we are
+          # including the JARs in the GH repo so users don't have to wait for this
+          echo "Installing connectors"
+          #confluent-hub install --no-prompt confluentinc/kafka-connect-elasticsearch:11.1.3
+          #confluent-hub install --no-prompt confluentinc/kafka-connect-jdbc:10.0.0
+          echo "Launching Kafka Connect worker"
+          /etc/confluent/docker/run &
+          #
+          sleep infinity
