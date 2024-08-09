@@ -132,7 +132,6 @@ services:
       POSTGRES_DB: root
     volumes:
     - ./files/postgres:/docker-entrypoint-initdb.d
-
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.5
     container_name: elasticsearch
@@ -142,7 +141,7 @@ services:
       - redpanda_network
     environment:
       discovery.type: single-node
-
+      ES_JAVA_OPTS: "-Xms750m -Xmx1000m"
   kafka-connect:
       image: confluentinc/cp-kafka-connect-base:7.7.0
       container_name: kafka-connect
