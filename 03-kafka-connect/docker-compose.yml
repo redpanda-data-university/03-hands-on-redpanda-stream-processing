@@ -143,7 +143,9 @@ services:
       image: confluentinc/cp-kafka-connect-base:7.2.0
       container_name: kafka-connect
       depends_on:
-        - redpanda
+        - redpanda-0
+        - redpanda-1
+        - redpanda-2
         - postgres
         - elasticsearch
       ports:
