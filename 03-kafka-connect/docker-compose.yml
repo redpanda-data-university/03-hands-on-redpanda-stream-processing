@@ -144,7 +144,7 @@ services:
       discovery.type: single-node
 
   kafka-connect:
-      image: confluentinc/cp-kafka-connect-base:7.2.0
+      image: confluentinc/cp-kafka-connect-base:7.7.0
       container_name: kafka-connect
       depends_on:
         - redpanda-0
