@@ -155,7 +155,7 @@ services:
       ports:
         - 8083:8083
       networks:
-      - redpanda_network
+        - redpanda_network
       environment:
         CONNECT_BOOTSTRAP_SERVERS: "redpanda-0:9092"
         CONNECT_REST_PORT: 8083
