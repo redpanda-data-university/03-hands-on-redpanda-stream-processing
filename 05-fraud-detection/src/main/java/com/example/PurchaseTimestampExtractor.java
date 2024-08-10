@@ -11,7 +11,7 @@ public class PurchaseTimestampExtractor implements TimestampExtractor {
   public long extract(ConsumerRecord<Object, Object> record, long partitionTime) {
     Purchase purchase = (Purchase) record.value();
     if (purchase != null && purchase.getTimestamp() != null) {
-      return purchase.getTimestamp().toEpochMilli();
+      return purchase.getTimestamp();
     }
     // fallback to stream time
     return partitionTime;

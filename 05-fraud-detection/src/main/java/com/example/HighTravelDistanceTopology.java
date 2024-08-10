@@ -89,7 +89,7 @@ class HighTravelDistanceTopology {
 
                 Alert alert =
                     Alert.newBuilder()
-                        .setTimestamp(purchase.getTimestamp().toEpochMilli())
+                        .setTimestamp(purchase.getTimestamp())
                         .setCreditCard(purchase.getCreditCard().toString())
                         .setType(PurchaseAlerts.ALERT_TRAVEL_DISTANCE)
                         .build();
