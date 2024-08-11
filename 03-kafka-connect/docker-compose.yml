@@ -155,6 +155,7 @@ services:
         - 8083:8083
       networks:
         - redpanda_network
+      mem_limit: "4g"
       environment:
         CONNECT_BOOTSTRAP_SERVERS: "redpanda-0:9092"
         CONNECT_REST_PORT: 8083
@@ -169,7 +170,7 @@ services:
         CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: "1"
         CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: "1"
         CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: "1"
-        KAFKA_HEAP_OPTS: "-Xmx2000M -Xms512M"
+        KAFKA_HEAP_OPTS: "-Xmx3000M -Xms1000M"
         CONNECT_PLUGIN_PATH: /usr/share/java,/usr/share/confluent-hub-components,/data/connect-jars
       volumes:
         - $PWD/data:/data
